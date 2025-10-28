@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心智圖儀表板</title>
+    <style>
+        /* ... 您的 CSS 樣式代碼保持不變 ... */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #sidebar {
+            width: 300px; /* 稍微加寬，讓分類標題更清晰 */
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            border-right: 1px solid #ddd;
+        }
+        .sidebar-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .sidebar-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #333;
+        }
+        #search-box {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .sidebar-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px 20px;
+        }
+        #map-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .category-header {
+            padding: 12px 0;
+            font-weight: bold;
+            color: #0056b3;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none; /* 防止雙擊時選取文字 */
+        }
+        .category-header::after {
+            content: '▼'; /* 預設收合的圖示 */
+            font-size: 0.8em;
+            transition: transform 0.2s;
+        }
+        .category-header.open::after {
+            transform: rotate(-180deg); /* 展開時的圖示 */
+        }
+        .map-items-container {
+            list-style: none;
+            padding-left: 15px; /* 將項目向內縮排 */
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+        }
+        .map-items-container.open {
+            max-height: 1000px; /* 一個足夠大的值讓內容可以完全顯示 */
+        }
+        .map-item a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #333;
+            border-radius: 5px;
+            margin: 4px 0;
+            transition: background-color 0.3s;
+        }
+        .map-item a:hover {
+            background-color: #e9ecef;
+        }
+        .map-item a.active {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        #content-area {
+            flex-grow: 1;
+            display: flex;
+        }
+        #mindmap-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <!-- ... 側邊欄 HTML 保持不變 ... -->
+        <div class="sidebar-header">
+            <h2>心智圖主題</h2>
+            <input type="text" id="search-box" placeholder="搜尋主題...">
+        </div>
+        <div class="sidebar-content">
+            <ul id="map-list">
+                <!-- 選單會由下方的 JavaScript 動態產生於此 -->
+            </ul>
+        </div>
+    </div>
+
+    <div id="content-area">
+        <iframe id="mindmap-frame" src="welcome.html" title="Mindmap Display"></iframe>
+    </div>
+
+    <script>
+        // --- 設定您的心智圖資料 (包含分類) ---
+        const mindmapData = [
+            // ... 您的分類與心智圖資料保持不變 ...
+            {
+                category: '法規與條款', // 分類名稱
+                maps: [ // 這個分類底下的心智圖列表
+                    {
+                        title: '人壽保單強制執行審查表', // 顯示在選單上的名稱
+                        file: 'maps/251028人壽保單強制執行免除及權益主張審查表.html' // 檔案路徑
+                    },
+                    {
+                        title: '勞基法重點整理',
+                        file: 'maps/labor-law.html' // 範例檔案
+                    }
+                ]
+            },
+            {
+                category: '專案管理',
+                maps: [
+                    {
+                        title: '專案啟動會議流程',
+                        file: 'maps/project-kickoff.html'
+                    },
+                    {
+                        title: '風險管理矩陣',
+                        file: 'maps/risk-matrix.html'
+                    }
+                ]
+            },
+            {
+                category: '未分類',
+                maps: [
+                    {
+                        title: '範例：第二個心智圖',
+                        file: 'maps/another-mindmap.html'
+                    }
+                ]
+            }
+        ];
+
+        // --- 以下是自動化功能的程式碼 ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const mapList = document.getElementById('map-list');
+            const mindmapFrame = document.getElementById('mindmap-frame');
+            const searchBox = document.getElementById('search-box');
+            let currentActiveLink = null;
+            
+            // --- 新增開始：強制設定 iframe 內容為深色模式 ---
+            mindmapFrame.addEventListener('load', function() {
+                try {
+                    // 嘗試存取 iframe 內的 document 物件
+                    const iframeDoc = mindmapFrame.contentWindow.document;
+                    // 在 iframe 的根元素 (<html>) 上加入 'markmap-dark' 這個 class
+                    iframeDoc.documentElement.classList.add('markmap-dark');
+                } catch (e) {
+                    // 如果因為同源政策等安全問題出錯，在主控台印出錯誤訊息
+                    console.error("無法修改 iframe 內容，可能是因為安全性限制:", e);
+                }
+            });
+            // --- 新增結束 ---
+
+            // 1. 產生選單的函式 (此處代碼不變)
+            function generateMenu(data) {
+                mapList.innerHTML = '';
+                data.forEach(categoryData => {
+                    const categoryLi = document.createElement('li');
+                    const categoryHeader = document.createElement('div');
+                    categoryHeader.className = 'category-header';
+                    categoryHeader.textContent = categoryData.category;
+                    categoryLi.appendChild(categoryHeader);
+                    const itemsContainer = document.createElement('ul');
+                    itemsContainer.className = 'map-items-container';
+                    categoryData.maps.forEach(map => {
+                        const mapItemLi = document.createElement('li');
+                        mapItemLi.className = 'map-item';
+                        const link = document.createElement('a');
+                        link.href = '#';
+                        link.textContent = map.title;
+                        link.dataset.file = map.file;
+                        link.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            mindmapFrame.src = this.dataset.file;
+                            if (currentActiveLink) {
+                                currentActiveLink.classList.remove('active');
+                            }
+                            this.classList.add('active');
+                            currentActiveLink = this;
+                        });
+                        mapItemLi.appendChild(link);
+                        itemsContainer.appendChild(mapItemLi);
+                    });
+                    categoryLi.appendChild(itemsContainer);
+                    mapList.appendChild(categoryLi);
+                    categoryHeader.addEventListener('click', () => {
+                        categoryHeader.classList.toggle('open');
+                        itemsContainer.classList.toggle('open');
+                    });
+                });
+            }
+
+            // 2. 篩選/搜尋功能的函式 (此處代碼不變)
+            function filterMaps() {
+                const filterText = searchBox.value.toLowerCase();
+                document.querySelectorAll('#map-list > li').forEach(categoryLi => {
+                    const categoryHeader = categoryLi.querySelector('.category-header');
+                    const itemsContainer = categoryLi.querySelector('.map-items-container');
+                    const mapItems = categoryLi.querySelectorAll('.map-item');
+                    let categoryHasVisibleItem = false;
+                    mapItems.forEach(item => {
+                        const link = item.querySelector('a');
+                        if (link.textContent.toLowerCase().includes(filterText)) {
+                            item.style.display = '';
+                            categoryHasVisibleItem = true;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                    if (categoryHasVisibleItem) {
+                        categoryLi.style.display = '';
+                        categoryHeader.classList.add('open');
+                        itemsContainer.classList.add('open');
+                    } else {
+                        categoryLi.style.display = 'none';
+                    }
+                    if (filterText === '') {
+                        categoryHeader.classList.remove('open');
+                        itemsContainer.classList.remove('open');
+                    }
+                });
+            }
+            
+            // 初始載入選單
+            generateMenu(mindmapData);
+
+            // 監聽搜尋框的輸入事件
+            searchBox.addEventListener('input', filterMaps);
+        });
+    </script>
+
+</body>
+</html>
