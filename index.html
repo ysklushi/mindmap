@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0">
     <title>心智圖儀表板</title>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
@@ -29,27 +29,25 @@
         .map-item a { display: block; padding: 10px 15px; text-decoration: none; color: #333; border-radius: 5px; margin: 4px 0; transition: background-color 0.2s, color 0.2s; }
         .map-item a:hover { background-color: #e9ecef; }
         
-        /* --- 修改：調整選中樣式 --- */
         .map-item a.active {
-            background-color: #2c3e50; /* 海軍藍/深藍灰色 */
+            background-color: #2c3e50;
             color: white;
-            font-weight: 500; /* 字體稍微加粗，但不過重 */
-            box-shadow: inset 3px 0 0 #3498db; /* 左側加入一個亮藍色提示條 */
+            font-weight: 500;
+            box-shadow: inset 3px 0 0 #3498db;
         }
 
         .sidebar-footer { padding: 15px 20px; text-align: center; font-size: 0.85em; color: #6c757d; border-top: 1px solid #ddd; background-color: #f8f9fa; margin-top: auto; }
         #content-area { flex-grow: 1; display: flex; }
         #mindmap-frame { width: 100%; height: 100%; border: none; }
         
-        /* --- 修改：切換按鈕的樣式 --- */
         #sidebar-toggle-btn {
             position: absolute;
             left: 300px;
             top: 50%;
             transform: translateY(-50%);
-            width: 20px; /* 稍微變窄 */
-            height: 40px; /* 稍微變短 */
-            background-color: #2c3e50; /* 與選中顏色統一 */
+            width: 20px;
+            height: 40px;
+            background-color: #2c3e50;
             border-radius: 0 5px 5px 0;
             cursor: pointer;
             z-index: 1000;
@@ -57,16 +55,15 @@
             align-items: center;
             justify-content: center;
             transition: left 0.3s ease;
-            color: white; /* 圖示顏色 */
+            color: white;
             font-size: 16px;
             font-weight: bold;
-            line-height: 40px; /* 垂直置中 */
+            line-height: 40px;
         }
         #sidebar-toggle-btn:hover {
-            background-color: #34495e; /* 滑鼠懸停時加深顏色 */
+            background-color: #34495e;
         }
 
-        /* --- 修改：當側邊欄收合時的樣式變化 --- */
         body.sidebar-collapsed #sidebar {
             width: 0;
             overflow: hidden;
@@ -91,7 +88,6 @@
         <div class="sidebar-footer">過勞律師製作</div>
     </div>
 
-    <!-- 修改：按鈕的 HTML -->
     <div id="sidebar-toggle-btn">&lt;</div>
 
     <div id="content-area">
@@ -99,11 +95,11 @@
     </div>
 
     <script>
-        const mindmapData = [ /* ... 您的資料保持不變 ... */
+        const mindmapData = [
             {
                 category: '法規與條款',
                 maps: [
-                    { id: 'life-insurance-enforcement-review', title: '人壽保單強制執行審查表', file: 'maps/251028人壽保單強制執行免除及權益主張審查表.html' },
+                    { id: 'life-insurance-enforcement-review', title: '人壽保單強制執行審查表', file: 'maps/251028保單強制執行免除及權益主張審查表.html' },
                     { id: 'labor-law-summary', title: '勞基法重點整理', file: 'maps/labor-law.html' }
                 ]
             },
@@ -122,7 +118,6 @@
             }
         ];
         document.addEventListener('DOMContentLoaded', function() {
-            // ... JavaScript 內容完全不變 ...
             const mapList = document.getElementById('map-list');
             const mindmapFrame = document.getElementById('mindmap-frame');
             const searchBox = document.getElementById('search-box');
@@ -153,10 +148,12 @@
                 mapList.innerHTML = '';
                 data.forEach(categoryData => {
                     const categoryLi = document.createElement('li');
+                    
                     const categoryHeader = document.createElement('div');
                     categoryHeader.className = 'category-header';
                     categoryHeader.textContent = categoryData.category;
                     categoryLi.appendChild(categoryHeader);
+                    
                     const itemsContainer = document.createElement('ul');
                     itemsContainer.className = 'map-items-container';
                     categoryData.maps.forEach(map => {
@@ -170,8 +167,12 @@
                         mapItemLi.appendChild(link);
                         itemsContainer.appendChild(mapItemLi);
                     });
+                    
                     categoryLi.appendChild(itemsContainer);
                     mapList.appendChild(categoryLi);
+                    
+                    // --- 這裡是修正的重點 ---
+                    // 將 addEventListener 從 appendChild 中分離出來，單獨執行
                     categoryHeader.addEventListener('click', () => {
                         categoryHeader.classList.toggle('open');
                         itemsContainer.classList.toggle('open');
@@ -179,7 +180,14 @@
                 });
             }
             
-            function filterMaps() { /* ... 此處代碼不變 ... */ }
+            function filterMaps() {
+                const searchTerm = searchBox.value.toLowerCase();
+                const filteredData = mindmapData.map(category => {
+                    const filteredMaps = category.maps.filter(map => map.title.toLowerCase().includes(searchTerm));
+                    return { ...category, maps: filteredMaps };
+                }).filter(category => category.maps.length > 0);
+                generateMenu(filteredData);
+            }
 
             generateMenu(mindmapData);
             searchBox.addEventListener('input', filterMaps);
@@ -188,11 +196,9 @@
             window.addEventListener('hashchange', handleUrlChange);
             handleUrlChange();
 
-            // --- 修改：為切換按鈕加上點擊事件，並改變圖示 ---
             const toggleBtn = document.getElementById('sidebar-toggle-btn');
             toggleBtn.addEventListener('click', function() {
                 const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
-                // 根據是否收合來改變按鈕的文字內容
                 toggleBtn.innerHTML = isCollapsed ? '&gt;' : '&lt;';
             });
         });
